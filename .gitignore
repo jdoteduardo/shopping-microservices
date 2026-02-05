@@ -1,0 +1,141 @@
+############################################################
+# .NET / ASP.NET Core
+############################################################
+bin/
+obj/
+out/
+publish/
+artifacts/
+
+*.dll
+*.exe
+*.pdb
+*.cache
+*.deps.json
+*.runtimeconfig.json
+
+############################################################
+# Build / Test Results
+############################################################
+TestResults/
+coverage/
+coverage.*
+*.trx
+
+############################################################
+# Logs
+############################################################
+*.log
+logs/
+**/logs/
+**/log/
+
+############################################################
+# User-specific files
+############################################################
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+############################################################
+# Visual Studio
+############################################################
+.vs/
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+############################################################
+# JetBrains Rider / IntelliJ
+############################################################
+.idea/
+*.sln.iml
+
+############################################################
+# Docker
+############################################################
+# Containers / runtime artifacts
+docker-data/
+docker-volumes/
+**/docker-volumes/
+**/docker-data/
+
+# Docker override files (geralmente locais)
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+
+############################################################
+# Environment variables
+############################################################
+.env
+.env.*
+!.env.example
+
+############################################################
+# Secrets / Configurações locais
+############################################################
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+
+############################################################
+# Certificates / Keys
+############################################################
+*.pfx
+*.cer
+*.crt
+*.pem
+*.key
+
+############################################################
+# Node / Frontend (se existir)
+############################################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+dist/
+build/
+.cache/
+
+############################################################
+# OS generated files
+############################################################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+############################################################
+# Temporary / Backup files
+############################################################
+*.tmp
+*.temp
+*.bak
+*.swp
+*.~*
+~$*
+
+############################################################
+# IDE / Tooling extras
+############################################################
+_ReSharper*/
+*.DotSettings.user
+
+############################################################
+# NuGet
+############################################################
+packages/
+*.nupkg
+*.snupkg
+.nuget/NuGet.Config.local
