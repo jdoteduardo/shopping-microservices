@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  catalog-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: catalog-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - catalog-db-data:/var/opt/mssql
+    networks:
+      - catalog-network
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  catalog-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: catalog-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Server=catalog-db,1433;Database=CatalogDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+    ports:
+      - "5001:80"
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    networks:
+      - catalog-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: on-failure
+
+networks:
+  catalog-network:
+    driver: bridge
+
+volumes:
+  catalog-db-data:

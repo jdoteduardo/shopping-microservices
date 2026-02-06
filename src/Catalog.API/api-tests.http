@@ -1,0 +1,210 @@
+### Catalog API - HTTP Requests
+### Usar com REST Client extension no VS Code
+
+@baseUrl = http://localhost:5001
+@contentType = application/json
+
+###############################################
+# Health Check
+###############################################
+
+### Health Check
+GET {{baseUrl}}/health
+
+###############################################
+# Categories
+###############################################
+
+### GET - All Categories
+GET {{baseUrl}}/api/categories
+Content-Type: {{contentType}}
+
+### GET - Category by ID
+GET {{baseUrl}}/api/categories/1
+Content-Type: {{contentType}}
+
+### POST - Create Category
+POST {{baseUrl}}/api/categories
+Content-Type: {{contentType}}
+
+{
+  "name": "Sports",
+  "description": "Sports equipment and apparel"
+}
+
+### PUT - Update Category
+PUT {{baseUrl}}/api/categories/1
+Content-Type: {{contentType}}
+
+{
+  "name": "Electronics Updated",
+  "description": "Electronic devices, gadgets and accessories"
+}
+
+### DELETE - Delete Category (will fail if has products)
+DELETE {{baseUrl}}/api/categories/4
+Content-Type: {{contentType}}
+
+###############################################
+# Products
+###############################################
+
+### GET - All Products
+GET {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+### GET - Product by ID
+GET {{baseUrl}}/api/products/1
+Content-Type: {{contentType}}
+
+### GET - Products by Category
+GET {{baseUrl}}/api/products/category/1
+Content-Type: {{contentType}}
+
+### POST - Create Product
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "Wireless Mouse",
+  "description": "Ergonomic wireless mouse with 6 buttons",
+  "price": 29.99,
+  "stock": 100,
+  "categoryId": 1,
+  "createdBy": "admin@shop.com"
+}
+
+### POST - Create Product (Invalid - negative price)
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "Test Product",
+  "description": "This should fail validation",
+  "price": -10.00,
+  "stock": 50,
+  "categoryId": 1,
+  "createdBy": "admin"
+}
+
+### POST - Create Product (Invalid - non-existent category)
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "Test Product",
+  "description": "Category doesn't exist",
+  "price": 10.00,
+  "stock": 50,
+  "categoryId": 999,
+  "createdBy": "admin"
+}
+
+### PUT - Update Product
+PUT {{baseUrl}}/api/products/1
+Content-Type: {{contentType}}
+
+{
+  "name": "Laptop Pro",
+  "description": "High-performance laptop with latest specs",
+  "price": 1299.99,
+  "stock": 15,
+  "categoryId": 1
+}
+
+### DELETE - Delete Product
+DELETE {{baseUrl}}/api/products/3
+Content-Type: {{contentType}}
+
+###############################################
+# Test Scenarios
+###############################################
+
+### Scenario 1: Create full product catalog
+
+# 1. Create categories
+POST {{baseUrl}}/api/categories
+Content-Type: {{contentType}}
+
+{
+  "name": "Home & Garden",
+  "description": "Home improvement and garden supplies"
+}
+
+###
+
+# 2. Create products in new category
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "Garden Hose",
+  "description": "50ft expandable garden hose",
+  "price": 24.99,
+  "stock": 75,
+  "categoryId": 4,
+  "createdBy": "system"
+}
+
+###
+
+# 3. Get all products in category
+GET {{baseUrl}}/api/products/category/4
+Content-Type: {{contentType}}
+
+###
+
+### Scenario 2: Batch Create Products
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "USB-C Cable",
+  "description": "2m USB-C fast charging cable",
+  "price": 9.99,
+  "stock": 200,
+  "categoryId": 1,
+  "createdBy": "admin"
+}
+
+###
+
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "Bluetooth Headphones",
+  "description": "Noise-cancelling wireless headphones",
+  "price": 79.99,
+  "stock": 50,
+  "categoryId": 1,
+  "createdBy": "admin"
+}
+
+###
+
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "Jeans",
+  "description": "Classic blue jeans",
+  "price": 49.99,
+  "stock": 120,
+  "categoryId": 2,
+  "createdBy": "admin"
+}
+
+###
+
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "name": "JavaScript Book",
+  "description": "Learn JavaScript ES6+",
+  "price": 34.99,
+  "stock": 40,
+  "categoryId": 3,
+  "createdBy": "admin"
+}
