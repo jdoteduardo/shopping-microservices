@@ -1,0 +1,281 @@
+# ============================================================================
+# Shop Microservices - Docker Compose
+# ============================================================================
+# Este arquivo define todos os serviços necessários para executar os
+# microserviços localmente em ambiente de desenvolvimento.
+#
+# USO:
+#   docker-compose up -d --build     # Iniciar todos os serviços
+#   docker-compose down              # Parar todos os serviços
+#   docker-compose down -v           # Parar e remover volumes (CUIDADO!)
+#   docker-compose logs -f           # Ver logs de todos os serviços
+#
+# VARIÁVEIS DE AMBIENTE:
+#   Copie .env.example para .env e ajuste as configurações conforme necessário.
+#
+# URLS DE ACESSO:
+#   - Catalog API:    http://localhost:5001
+#   - Basket API:     http://localhost:5002
+#   - Ordering API:   http://localhost:5003
+#   - Seq (Logs):     http://localhost:5341
+#   - RabbitMQ UI:    http://localhost:15672
+# ============================================================================
+
+version: "3.8"
+
+services:
+  # ==========================================================================
+  # INFRAESTRUTURA
+  # ==========================================================================
+
+  # --------------------------------------------------------------------------
+  # SQL Server 2022 (Catalog.API)
+  # Database relacional para o catálogo de produtos
+  # -----------------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: shop-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${SQL_SA_PASSWORD:-YourStrong@Passw0rd123}
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - shop-network
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Redis 7 (Basket.API)
+  # Cache distribuído para o carrinho de compras
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: shop-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # MongoDB 6 (Ordering.API)
+  # Banco de dados NoSQL para pedidos
+  # --------------------------------------------------------------------------
+  mongodb:
+    image: mongo:6
+    container_name: shop-mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-example}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - shop-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # RabbitMQ 3 with Management UI
+  # Message broker para comunicação assíncrona entre microserviços
+  # Management UI: http://localhost:15672 (guest/guest)
+  # --------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: shop-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"     # AMQP protocol
+      - "15672:15672"   # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - shop-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Seq (Centralized Logging)
+  # Interface web para visualização de logs estruturados
+  # UI: http://localhost:5341
+  # --------------------------------------------------------------------------
+  seq:
+    image: datalust/seq:latest
+    container_name: shop-seq
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=True
+    ports:
+      - "5341:80"
+    volumes:
+      - seq-data:/data
+    networks:
+      - shop-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # MICROSERVIÇOS
+  # ==========================================================================
+
+  # --------------------------------------------------------------------------
+  # Catalog API
+  # Gerenciamento de produtos e categorias
+  # Swagger: http://localhost:5001
+  # Health: http://localhost:5001/health
+  # --------------------------------------------------------------------------
+  catalog-api:
+    build:
+      context: ./src/Catalog.API
+      dockerfile: Dockerfile
+    container_name: shop-catalog-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CatalogDb;User Id=sa;Password=${SQL_SA_PASSWORD:-YourStrong@Passw0rd123};TrustServerCertificate=True
+      - Seq__ServerUrl=http://seq:5341
+    ports:
+      - "5001:80"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: on-failure
+
+  # --------------------------------------------------------------------------
+  # Basket API
+  # Gerenciamento do carrinho de compras
+  # Swagger: http://localhost:5002
+  # Health: http://localhost:5002/health
+  # --------------------------------------------------------------------------
+  basket-api:
+    build:
+      context: ./src/Basket.API
+      dockerfile: Dockerfile
+    container_name: shop-basket-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Redis=redis:6379
+      - Seq__ServerUrl=http://seq:5341
+    ports:
+      - "5002:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: on-failure
+
+  # --------------------------------------------------------------------------
+  # Ordering API
+  # Gerenciamento de pedidos
+  # Swagger: http://localhost:5003
+  # Health: http://localhost:5003/health
+  # --------------------------------------------------------------------------
+  ordering-api:
+    build:
+      context: ./src/Ordering.API
+      dockerfile: Dockerfile
+    container_name: shop-ordering-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MongoDbSettings__ConnectionString=mongodb://root:${MONGO_PASSWORD:-example}@mongodb:27017
+      - MongoDbSettings__DatabaseName=OrderingDb
+      - Seq__ServerUrl=http://seq:5341
+    ports:
+      - "5003:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: on-failure
+
+# ============================================================================
+# VOLUMES
+# Volumes nomeados para persistência de dados
+# ============================================================================
+volumes:
+  # SQL Server data files
+  sqlserver-data:
+    name: shop-sqlserver-data
+
+  # Redis AOF persistence
+  redis-data:
+    name: shop-redis-data
+
+  # MongoDB data files
+  mongodb-data:
+    name: shop-mongodb-data
+
+  # RabbitMQ mnesia database
+  rabbitmq-data:
+    name: shop-rabbitmq-data
+
+  # Seq log storage
+  seq-data:
+    name: shop-seq-data
+
+# ============================================================================
+# NETWORKS
+# Rede bridge para comunicação entre containers
+# ============================================================================
+networks:
+  shop-network:
+    name: shop-network
+    driver: bridge

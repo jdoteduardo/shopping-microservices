@@ -1,23 +1,27 @@
-using Catalog.API.Data;
-using Catalog.API.Repositories;
+using Ordering.API.Data;
+using Ordering.API.Repositories;
+using Ordering.API.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
-namespace Catalog.API.Extensions;
+namespace Ordering.API.Extensions;
 
 public static class ServiceExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database
-        services.AddDbContext<CatalogContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+        // MongoDB Settings
+        services.Configure<MongoDbSettings>(configuration.GetSection("MongoDbSettings"));
+
+        // MongoDB Context
+        services.AddSingleton<MongoDbContext>();
 
         // Repositories
-        services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+
+        // Services
+        services.AddScoped<IOrderService, OrderService>();
 
         // AutoMapper
         services.AddAutoMapper(Assembly.GetExecutingAssembly());
@@ -27,8 +31,11 @@ public static class ServiceExtensions
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
         // Health Checks
+        var mongoConnectionString = configuration.GetSection("MongoDbSettings:ConnectionString").Value
+            ?? throw new InvalidOperationException("MongoDB connection string is not configured");
+        
         services.AddHealthChecks()
-            .AddDbContextCheck<CatalogContext>("database");
+            .AddMongoDb(mongoConnectionString, name: "mongodb", tags: new[] { "ready" });
 
         return services;
     }
@@ -40,15 +47,23 @@ public static class ServiceExtensions
         {
             options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
             {
-                Title = "Catalog API",
+                Title = "Ordering API",
                 Version = "v1",
-                Description = "Product Catalog Microservice API",
+                Description = "Order Management Microservice API",
                 Contact = new Microsoft.OpenApi.Models.OpenApiContact
                 {
                     Name = "ShopMicroservices",
                     Email = "support@shopmicroservices.com"
                 }
             });
+
+            // Include XML comments if available
+            var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+            if (File.Exists(xmlPath))
+            {
+                options.IncludeXmlComments(xmlPath);
+            }
         });
 
         return services;
@@ -59,7 +74,7 @@ public static class ServiceExtensions
         app.UseSwagger();
         app.UseSwaggerUI(options =>
         {
-            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Catalog API v1");
+            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Ordering API v1");
             options.RoutePrefix = "swagger";
         });
 
