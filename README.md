@@ -19,13 +19,14 @@ The platform is designed to be **production-ready** and **cloud-agnostic**, prep
 
 ## ✨ Features
 
-- **🔧 Independent Microservices** - Three domain-driven microservices (Catalog, Basket, Ordering)
-- **📨 Event-Driven Architecture** - Asynchronous communication using RabbitMQ
-- **🔐 JWT Authentication** - Secure token-based authentication and authorization
-- **🌐 API Gateway** - Centralized entry point for client applications
-- **🐳 Docker Containerization** - Fully containerized services with Docker Compose
-- **📊 Monitoring & Observability** - Built-in health checks and monitoring capabilities
-- **🚀 CI/CD Pipeline** - Automated build and deployment workflows
+- **🔧 Independent Microservices** — Three domain-driven microservices (Catalog, Basket, Ordering)
+- **📨 Event-Driven Architecture** — Asynchronous communication using RabbitMQ
+- **🔐 JWT Authentication & Authorization** — Secure token-based auth with centralized validation at the Gateway
+- **🛡️ Role-Based Access Control** — `User` and `Admin` roles with per-endpoint permission enforcement
+- **🌐 API Gateway** — Centralized entry point with Ocelot reverse proxy, rate limiting, and claim propagation
+- **🐳 Docker Containerization** — Fully containerized services with Docker Compose
+- **📊 Monitoring & Observability** — Built-in health checks, Seq structured logging, and Serilog
+- **🚀 CI/CD Pipeline** — Automated build and deployment workflows
 
 ---
 
@@ -74,10 +75,50 @@ The platform is designed to be **production-ready** and **cloud-agnostic**, prep
 
 3. **Access the services**
    - API Gateway: `http://localhost:5000`
-   - Catalog API: `http://localhost:5001`
-   - Basket API: `http://localhost:5002`
-   - Ordering API: `http://localhost:5003`
+   - Seq (Logs): `http://localhost:5341`
    - RabbitMQ Management: `http://localhost:15672` (guest/guest)
+
+   > **Note:** Microservices are not exposed directly to the host. Access them through the API Gateway (e.g., `http://localhost:5000/api/catalog/products`).
+
+---
+
+## 🔐 Authentication
+
+The platform uses **JWT Bearer tokens** for authentication. The API Gateway validates tokens and propagates user identity to downstream services.
+
+### Login to get a token
+
+```bash
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"Test@123"}'
+```
+
+**Response:**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "expiresAt": "2026-02-24T00:00:00Z",
+  "tokenType": "Bearer"
+}
+```
+
+### Test Users
+
+| Role | Email | Password |
+|---|---|---|
+| User | `user@example.com` | `Test@123` |
+| Admin | `admin@example.com` | `Admin@123` |
+
+### Use the token in requests
+
+```bash
+curl http://localhost:5000/api/catalog/products \
+  -H "Authorization: Bearer <token>"
+```
+
+> 📖 For the full authentication guide (claims, roles, middleware, troubleshooting), see **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)**.
 
 ---
 

@@ -7,10 +7,6 @@ public class UpdateBasketDtoValidator : AbstractValidator<UpdateBasketDto>
 {
     public UpdateBasketDtoValidator()
     {
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required")
-            .MaximumLength(50).WithMessage("UserId cannot exceed 50 characters");
-
         RuleFor(x => x.Items)
             .NotNull().WithMessage("Items cannot be null");
 

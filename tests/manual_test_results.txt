@@ -1,0 +1,6 @@
+﻿[0;34m===================================================[0m
+[0;34m     SHOP MICROSERVICES MANUAL TEST SCRIPT         [0m
+[0;34m===================================================[0m
+
+[1;33m0. Logging in as regular user (user@example.com)...[0m
+[0;31mFAILED: Could not obtain token. Response: [0m

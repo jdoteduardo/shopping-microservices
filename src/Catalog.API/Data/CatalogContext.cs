@@ -12,6 +12,7 @@ public class CatalogContext : DbContext
 
     public DbSet<Product> Products { get; set; }
     public DbSet<Category> Categories { get; set; }
+    public DbSet<ProcessedEvent> ProcessedEvents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

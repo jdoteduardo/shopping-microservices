@@ -26,4 +26,11 @@
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\BuildingBlocks\EventBus\EventBus.csproj" />
+    <ProjectReference Include="..\Shared\BuildingBlocks\EventBus.RabbitMQ\EventBus.RabbitMQ.csproj" />
+    <ProjectReference Include="..\Shared\BuildingBlocks\IntegrationEvents\IntegrationEvents.csproj" />
+    <ProjectReference Include="..\Shared\BuildingBlocks\UserContext\UserContext.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -23,9 +23,5 @@ public class CreateProductDtoValidator : AbstractValidator<CreateProductDto>
 
         RuleFor(x => x.CategoryId)
             .GreaterThan(0).WithMessage("CategoryId must be greater than zero");
-
-        RuleFor(x => x.CreatedBy)
-            .NotEmpty().WithMessage("CreatedBy is required")
-            .MaximumLength(100).WithMessage("CreatedBy must not exceed 100 characters");
     }
 }

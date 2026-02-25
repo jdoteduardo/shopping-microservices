@@ -1,0 +1,85 @@
+{
+    "Routes": [
+        {
+            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "catalog-api",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/api/catalog/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer",
+                "AllowedScopes": []
+            },
+            "RateLimitOptions": {
+                "ClientWhitelist": [],
+                "EnableRateLimiting": true,
+                "Period": "1m",
+                "PeriodTimespan": 60,
+                "Limit": 100
+            },
+            "FileCacheOptions": {
+                "TtlSeconds": 15
+            },
+            "QoSOptions": {
+                "ExceptionsAllowedBeforeBreaking": 3,
+                "DurationOfBreak": 10000,
+                "TimeoutValue": 5000
+            }
+        },
+        {
+            "DownstreamPathTemplate": "/api/Basket/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "basket-api",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/api/basket/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer",
+                "AllowedScopes": []
+            }
+        },
+        {
+            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "ordering-api",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/api/ordering/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer",
+                "AllowedScopes": []
+            }
+        }
+    ],
+    "GlobalConfiguration": {
+        "BaseUrl": "http://localhost:5000"
+    }
+}

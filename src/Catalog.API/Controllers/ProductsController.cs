@@ -1,8 +1,7 @@
-using AutoMapper;
 using Catalog.API.DTOs;
-using Catalog.API.Models;
-using Catalog.API.Repositories;
+using Catalog.API.Services;
 using Microsoft.AspNetCore.Mvc;
+using UserContext;
 
 namespace Catalog.API.Controllers;
 
@@ -11,17 +10,17 @@ namespace Catalog.API.Controllers;
 [Produces("application/json")]
 public class ProductsController : ControllerBase
 {
-    private readonly IProductRepository _repository;
-    private readonly IMapper _mapper;
+    private readonly IProductService _productService;
+    private readonly IUserContext _userContext;
     private readonly ILogger<ProductsController> _logger;
 
     public ProductsController(
-        IProductRepository repository,
-        IMapper mapper,
+        IProductService productService,
+        IUserContext userContext,
         ILogger<ProductsController> logger)
     {
-        _repository = repository;
-        _mapper = mapper;
+        _productService = productService;
+        _userContext = userContext;
         _logger = logger;
     }
 
@@ -34,9 +33,8 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
     {
         _logger.LogInformation("Getting all products");
-        var products = await _repository.GetAllAsync();
-        var productDtos = _mapper.Map<IEnumerable<ProductDto>>(products);
-        return Ok(productDtos);
+        var products = await _productService.GetAllAsync();
+        return Ok(products);
     }
 
     /// <summary>
@@ -50,7 +48,7 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<ProductDto>> GetById(int id)
     {
         _logger.LogInformation("Getting product with id {ProductId}", id);
-        var product = await _repository.GetByIdAsync(id);
+        var product = await _productService.GetByIdAsync(id);
 
         if (product == null)
         {
@@ -58,8 +56,7 @@ public class ProductsController : ControllerBase
             return NotFound(new { message = $"Product with id {id} not found" });
         }
 
-        var productDto = _mapper.Map<ProductDto>(product);
-        return Ok(productDto);
+        return Ok(product);
     }
 
     /// <summary>
@@ -72,9 +69,8 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetByCategoryId(int categoryId)
     {
         _logger.LogInformation("Getting products for category {CategoryId}", categoryId);
-        var products = await _repository.GetByCategoryIdAsync(categoryId);
-        var productDtos = _mapper.Map<IEnumerable<ProductDto>>(products);
-        return Ok(productDtos);
+        var products = await _productService.GetByCategoryIdAsync(categoryId);
+        return Ok(products);
     }
 
     /// <summary>
@@ -84,22 +80,19 @@ public class ProductsController : ControllerBase
     /// <returns>Created product</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ProductDto>> Create([FromBody] CreateProductDto createProductDto)
     {
-        _logger.LogInformation("Creating new product: {ProductName}", createProductDto.Name);
-
-        // Validate category exists
-        if (!await _repository.CategoryExistsAsync(createProductDto.CategoryId))
+        if (!_userContext.IsAuthenticated)
         {
-            _logger.LogWarning("Category with id {CategoryId} not found", createProductDto.CategoryId);
-            return BadRequest(new { message = $"Category with id {createProductDto.CategoryId} does not exist" });
+            return Unauthorized();
         }
 
-        var product = _mapper.Map<Product>(createProductDto);
-        var createdProduct = await _repository.CreateAsync(product);
-        var productDto = _mapper.Map<ProductDto>(createdProduct);
+        _logger.LogInformation("User {UserId} is creating new product: {ProductName}", 
+            _userContext.UserId, createProductDto.Name);
 
+        var productDto = await _productService.CreateAsync(createProductDto, _userContext.UserId);
         return CreatedAtAction(nameof(GetById), new { id = productDto.Id }, productDto);
     }
 
@@ -111,31 +104,25 @@ public class ProductsController : ControllerBase
     /// <returns>Updated product</returns>
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ProductDto>> Update(int id, [FromBody] UpdateProductDto updateProductDto)
     {
-        _logger.LogInformation("Updating product with id {ProductId}", id);
+        if (!_userContext.IsAuthenticated)
+        {
+            return Unauthorized();
+        }
 
-        var existingProduct = await _repository.GetByIdAsync(id);
-        if (existingProduct == null)
+        _logger.LogInformation("User {UserId} is updating product with id {ProductId}", 
+            _userContext.UserId, id);
+
+        var productDto = await _productService.UpdateAsync(id, updateProductDto, _userContext.UserId);
+        if (productDto == null)
         {
             _logger.LogWarning("Product with id {ProductId} not found", id);
             return NotFound(new { message = $"Product with id {id} not found" });
         }
-
-        // Validate category exists
-        if (!await _repository.CategoryExistsAsync(updateProductDto.CategoryId))
-        {
-            _logger.LogWarning("Category with id {CategoryId} not found", updateProductDto.CategoryId);
-            return BadRequest(new { message = $"Category with id {updateProductDto.CategoryId} does not exist" });
-        }
-
-        _mapper.Map(updateProductDto, existingProduct);
-        existingProduct.Id = id; // Ensure ID doesn't change
-
-        var updatedProduct = await _repository.UpdateAsync(existingProduct);
-        var productDto = _mapper.Map<ProductDto>(updatedProduct);
 
         return Ok(productDto);
     }
@@ -147,12 +134,19 @@ public class ProductsController : ControllerBase
     /// <returns>No content</returns>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
-        _logger.LogInformation("Deleting product with id {ProductId}", id);
+        if (!_userContext.IsInRole("Admin"))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
 
-        var deleted = await _repository.DeleteAsync(id);
+        _logger.LogWarning("Product {ProductId} deleted by admin {UserId}", id, _userContext.UserId);
+
+        var deleted = await _productService.DeleteAsync(id);
         if (!deleted)
         {
             _logger.LogWarning("Product with id {ProductId} not found", id);

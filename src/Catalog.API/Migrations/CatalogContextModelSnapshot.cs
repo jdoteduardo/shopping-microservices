@@ -68,6 +68,24 @@ namespace Catalog.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Catalog.API.Models.ProcessedEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProcessedEvents");
+                });
+
             modelBuilder.Entity("Catalog.API.Models.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -106,6 +124,9 @@ namespace Catalog.API.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
@@ -119,7 +140,7 @@ namespace Catalog.API.Migrations
                         {
                             Id = 1,
                             CategoryId = 1,
-                            CreatedAt = new DateTime(2026, 2, 6, 2, 21, 57, 794, DateTimeKind.Utc).AddTicks(479),
+                            CreatedAt = new DateTime(2026, 2, 20, 1, 5, 42, 712, DateTimeKind.Utc).AddTicks(4576),
                             CreatedBy = "System",
                             Description = "High-performance laptop",
                             Name = "Laptop",
@@ -130,7 +151,7 @@ namespace Catalog.API.Migrations
                         {
                             Id = 2,
                             CategoryId = 2,
-                            CreatedAt = new DateTime(2026, 2, 6, 2, 21, 57, 794, DateTimeKind.Utc).AddTicks(482),
+                            CreatedAt = new DateTime(2026, 2, 20, 1, 5, 42, 712, DateTimeKind.Utc).AddTicks(4582),
                             CreatedBy = "System",
                             Description = "Cotton t-shirt",
                             Name = "T-Shirt",
@@ -141,7 +162,7 @@ namespace Catalog.API.Migrations
                         {
                             Id = 3,
                             CategoryId = 3,
-                            CreatedAt = new DateTime(2026, 2, 6, 2, 21, 57, 794, DateTimeKind.Utc).AddTicks(484),
+                            CreatedAt = new DateTime(2026, 2, 20, 1, 5, 42, 712, DateTimeKind.Utc).AddTicks(4584),
                             CreatedBy = "System",
                             Description = "Learn C# from scratch",
                             Name = "C# Programming Book",

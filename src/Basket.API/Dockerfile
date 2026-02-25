@@ -2,12 +2,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /src
 
-# Copy csproj and restore dependencies
-COPY ["Basket.API.csproj", "./"]
-RUN dotnet restore "Basket.API.csproj"
+# Copy project files and restore dependencies
+COPY ["src/Basket.API/Basket.API.csproj", "src/Basket.API/"]
+COPY ["src/Shared/BuildingBlocks/UserContext/UserContext.csproj", "src/Shared/BuildingBlocks/UserContext/"]
+
+RUN dotnet restore "src/Basket.API/Basket.API.csproj"
 
 # Copy everything else and build
 COPY . .
+WORKDIR "/src/src/Basket.API"
 RUN dotnet build "Basket.API.csproj" -c Release -o /app/build
 
 # Stage 2: Publish

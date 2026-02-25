@@ -1,6 +1,7 @@
 using Ordering.API.DTOs;
 using Ordering.API.Services;
 using Microsoft.AspNetCore.Mvc;
+using UserContext;
 
 namespace Ordering.API.Controllers;
 
@@ -10,24 +11,52 @@ namespace Ordering.API.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;
+    private readonly IUserContext _userContext;
     private readonly ILogger<OrdersController> _logger;
 
-    public OrdersController(IOrderService orderService, ILogger<OrdersController> logger)
+    public OrdersController(IOrderService orderService, IUserContext userContext, ILogger<OrdersController> logger)
     {
         _orderService = orderService;
+        _userContext = userContext;
         _logger = logger;
     }
 
     /// <summary>
-    /// Get all orders (Admin only - prepare for JWT)
+    /// Get all orders (Admin only)
     /// </summary>
     /// <returns>List of all orders</returns>
-    [HttpGet]
+    [HttpGet("all")]
     [ProducesResponseType(typeof(IEnumerable<OrderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IEnumerable<OrderDto>>> GetAll()
     {
-        _logger.LogInformation("Getting all orders");
+        if (!_userContext.IsInRole("Admin"))
+        {
+            _logger.LogWarning("User {UserId} tried to access all orders without Admin role", _userContext.UserId);
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        _logger.LogInformation("Admin {UserId} getting all orders", _userContext.UserId);
         var orders = await _orderService.GetAllOrdersAsync();
+        return Ok(orders);
+    }
+
+    /// <summary>
+    /// Get orders for the currently authenticated user
+    /// </summary>
+    /// <returns>List of current user's orders</returns>
+    [HttpGet("my")]
+    [ProducesResponseType(typeof(IEnumerable<OrderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IEnumerable<OrderDto>>> GetMyOrders()
+    {
+        if (!_userContext.IsAuthenticated)
+        {
+            return Unauthorized();
+        }
+
+        _logger.LogInformation("User {UserId} getting their orders", _userContext.UserId);
+        var orders = await _orderService.GetOrdersByUserIdAsync(_userContext.UserId!);
         return Ok(orders);
     }
 
@@ -74,12 +103,19 @@ public class OrdersController : ControllerBase
     /// <returns>Created order</returns>
     [HttpPost]
     [ProducesResponseType(typeof(OrderDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<OrderDto>> Create([FromBody] CreateOrderDto createOrderDto)
     {
-        _logger.LogInformation("Creating new order for user {UserId}", createOrderDto.UserId);
+        if (!_userContext.IsAuthenticated)
+        {
+            _logger.LogWarning("Unauthorized attempt to create order");
+            return Unauthorized();
+        }
 
-        var order = await _orderService.CreateOrderAsync(createOrderDto);
+        _logger.LogInformation("Creating new order for user {UserId}", _userContext.UserId);
+
+        var order = await _orderService.CreateOrderAsync(createOrderDto, _userContext.UserId);
 
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
     }

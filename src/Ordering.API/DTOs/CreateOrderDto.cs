@@ -2,7 +2,6 @@ namespace Ordering.API.DTOs;
 
 public class CreateOrderDto
 {
-    public string UserId { get; set; } = string.Empty;
     public List<CreateOrderItemDto> Items { get; set; } = new();
     public AddressDto ShippingAddress { get; set; } = new();
 }

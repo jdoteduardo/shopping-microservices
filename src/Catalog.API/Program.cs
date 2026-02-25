@@ -1,6 +1,9 @@
 ﻿using Catalog.API.Data;
 using Catalog.API.Extensions;
+using Catalog.API.IntegrationEventHandlers;
 using Catalog.API.Middleware;
+using EventBus.Abstractions;
+using IntegrationEvents;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -73,6 +76,18 @@ try
     });
 
     Log.Information("Catalog.API started successfully");
+
+    // Subscribe to integration events
+    try
+    {
+        var eventBus = app.Services.GetRequiredService<IEventBus>();
+        await eventBus.SubscribeAsync<OrderCreatedIntegrationEvent, OrderCreatedIntegrationEventHandler>();
+        Log.Information("Subscribed to OrderCreatedIntegrationEvent");
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Failed to subscribe to integration events. EventBus may not be available yet.");
+    }
 
     app.Run();
 }

@@ -2,12 +2,18 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /src
 
-# Copy csproj and restore dependencies
-COPY ["Ordering.API.csproj", "./"]
-RUN dotnet restore "Ordering.API.csproj"
+# Copy project files and restore dependencies
+COPY ["src/Ordering.API/Ordering.API.csproj", "src/Ordering.API/"]
+COPY ["src/Shared/BuildingBlocks/EventBus/EventBus.csproj", "src/Shared/BuildingBlocks/EventBus/"]
+COPY ["src/Shared/BuildingBlocks/EventBus.RabbitMQ/EventBus.RabbitMQ.csproj", "src/Shared/BuildingBlocks/EventBus.RabbitMQ/"]
+COPY ["src/Shared/BuildingBlocks/IntegrationEvents/IntegrationEvents.csproj", "src/Shared/BuildingBlocks/IntegrationEvents/"]
+COPY ["src/Shared/BuildingBlocks/UserContext/UserContext.csproj", "src/Shared/BuildingBlocks/UserContext/"]
+
+RUN dotnet restore "src/Ordering.API/Ordering.API.csproj"
 
 # Copy everything else and build
 COPY . .
+WORKDIR "/src/src/Ordering.API"
 RUN dotnet build "Ordering.API.csproj" -c Release -o /app/build
 
 # Stage 2: Publish

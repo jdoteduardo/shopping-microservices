@@ -2,6 +2,7 @@ using AutoMapper;
 using Catalog.API.DTOs;
 using Catalog.API.Models;
 using Catalog.API.Repositories;
+using UserContext;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Catalog.API.Controllers;
@@ -13,15 +14,18 @@ public class CategoriesController : ControllerBase
 {
     private readonly ICategoryRepository _repository;
     private readonly IMapper _mapper;
+    private readonly IUserContext _userContext;
     private readonly ILogger<CategoriesController> _logger;
 
     public CategoriesController(
         ICategoryRepository repository,
         IMapper mapper,
+        IUserContext userContext,
         ILogger<CategoriesController> logger)
     {
         _repository = repository;
         _mapper = mapper;
+        _userContext = userContext;
         _logger = logger;
     }
 
@@ -69,9 +73,15 @@ public class CategoriesController : ControllerBase
     /// <returns>Created category</returns>
     [HttpPost]
     [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CategoryDto>> Create([FromBody] CreateCategoryDto createCategoryDto)
     {
+        if (!_userContext.IsAuthenticated)
+        {
+            return Unauthorized();
+        }
+
         _logger.LogInformation("Creating new category: {CategoryName}", createCategoryDto.Name);
 
         var category = _mapper.Map<Category>(createCategoryDto);
@@ -89,9 +99,15 @@ public class CategoriesController : ControllerBase
     /// <returns>Updated category</returns>
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CategoryDto>> Update(int id, [FromBody] UpdateCategoryDto updateCategoryDto)
     {
+        if (!_userContext.IsAuthenticated)
+        {
+            return Unauthorized();
+        }
+
         _logger.LogInformation("Updating category with id {CategoryId}", id);
 
         var existingCategory = await _repository.GetByIdAsync(id);
@@ -117,10 +133,16 @@ public class CategoriesController : ControllerBase
     /// <returns>No content</returns>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!_userContext.IsInRole("Admin"))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
         _logger.LogInformation("Deleting category with id {CategoryId}", id);
 
         // Check if category has products

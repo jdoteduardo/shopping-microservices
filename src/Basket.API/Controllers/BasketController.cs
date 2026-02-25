@@ -1,6 +1,7 @@
 using Basket.API.DTOs;
 using Basket.API.Services;
 using Microsoft.AspNetCore.Mvc;
+using UserContext;
 
 namespace Basket.API.Controllers;
 
@@ -10,46 +11,64 @@ namespace Basket.API.Controllers;
 public class BasketController : ControllerBase
 {
     private readonly IBasketService _basketService;
+    private readonly IUserContext _userContext;
     private readonly ILogger<BasketController> _logger;
 
-    public BasketController(IBasketService basketService, ILogger<BasketController> logger)
+    public BasketController(
+        IBasketService basketService, 
+        IUserContext userContext,
+        ILogger<BasketController> logger)
     {
         _basketService = basketService;
+        _userContext = userContext;
         _logger = logger;
     }
 
+    private string? UserId => _userContext.UserId;
+
     /// <summary>
-    /// Get basket by user ID
+    /// Get basket for currently authenticated user
     /// </summary>
-    /// <param name="userId">User ID</param>
     /// <returns>User's basket</returns>
-    [HttpGet("{userId}")]
+    [HttpGet]
     [ProducesResponseType(typeof(BasketDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<BasketDto>> GetBasket(string userId)
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<BasketDto>> GetBasket()
     {
-        _logger.LogInformation("Getting basket for user {UserId}", userId);
+        if (!_userContext.IsAuthenticated || UserId == null)
+        {
+            return Unauthorized();
+        }
+
+        _logger.LogInformation("Getting basket for user {UserId}", UserId);
         
-        var basket = await _basketService.GetBasketAsync(userId);
+        var basket = await _basketService.GetBasketAsync(UserId);
         return Ok(basket);
     }
 
     /// <summary>
-    /// Create or update basket
+    /// Create or update basket for currently authenticated user
     /// </summary>
     /// <param name="updateBasketDto">Basket data</param>
     /// <returns>Updated basket</returns>
     [HttpPost]
     [ProducesResponseType(typeof(BasketDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<BasketDto>> UpdateBasket([FromBody] UpdateBasketDto updateBasketDto)
     {
-        _logger.LogInformation("Updating basket for user {UserId}", updateBasketDto.UserId);
+        if (!_userContext.IsAuthenticated || UserId == null)
+        {
+            return Unauthorized();
+        }
 
-        var basket = await _basketService.UpdateBasketAsync(updateBasketDto);
+        _logger.LogInformation("Updating basket for user {UserId}", UserId);
+
+        var basket = await _basketService.UpdateBasketAsync(UserId, updateBasketDto);
 
         if (basket == null)
         {
-            _logger.LogWarning("Failed to update basket for user {UserId}", updateBasketDto.UserId);
+            _logger.LogWarning("Failed to update basket for user {UserId}", UserId);
             return BadRequest(new { message = "Failed to update basket" });
         }
 
@@ -57,47 +76,57 @@ public class BasketController : ControllerBase
     }
 
     /// <summary>
-    /// Delete basket
+    /// Clear basket for currently authenticated user
     /// </summary>
-    /// <param name="userId">User ID</param>
     /// <returns>No content</returns>
-    [HttpDelete("{userId}")]
+    [HttpDelete]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteBasket(string userId)
+    public async Task<IActionResult> DeleteBasket()
     {
-        _logger.LogInformation("Deleting basket for user {UserId}", userId);
+        if (!_userContext.IsAuthenticated || UserId == null)
+        {
+            return Unauthorized();
+        }
 
-        var deleted = await _basketService.DeleteBasketAsync(userId);
+        _logger.LogInformation("Deleting basket for user {UserId}", UserId);
+
+        var deleted = await _basketService.DeleteBasketAsync(UserId);
 
         if (!deleted)
         {
-            _logger.LogWarning("Basket not found for user {UserId}", userId);
-            return NotFound(new { message = $"Basket for user {userId} not found" });
+            _logger.LogWarning("Basket not found for user {UserId}", UserId);
+            return NotFound(new { message = $"Basket for user {UserId} not found" });
         }
 
         return NoContent();
     }
 
     /// <summary>
-    /// Add item to basket
+    /// Add item to current user's basket
     /// </summary>
-    /// <param name="userId">User ID</param>
     /// <param name="addItemDto">Item data</param>
     /// <returns>Updated basket</returns>
-    [HttpPost("{userId}/items")]
+    [HttpPost("items")]
     [ProducesResponseType(typeof(BasketDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<BasketDto>> AddItem(string userId, [FromBody] AddItemDto addItemDto)
+    public async Task<ActionResult<BasketDto>> AddItem([FromBody] AddItemDto addItemDto)
     {
-        _logger.LogInformation("Adding item {ProductId} to basket for user {UserId}", 
-            addItemDto.ProductId, userId);
+        if (!_userContext.IsAuthenticated || UserId == null)
+        {
+            return Unauthorized();
+        }
 
-        var basket = await _basketService.AddItemToBasketAsync(userId, addItemDto);
+        _logger.LogInformation("Adding item {ProductId} to basket for user {UserId}", 
+            addItemDto.ProductId, UserId);
+
+        var basket = await _basketService.AddItemToBasketAsync(UserId, addItemDto);
 
         if (basket == null)
         {
-            _logger.LogWarning("Failed to add item to basket for user {UserId}", userId);
+            _logger.LogWarning("Failed to add item to basket for user {UserId}", UserId);
             return BadRequest(new { message = "Failed to add item to basket" });
         }
 
@@ -105,59 +134,68 @@ public class BasketController : ControllerBase
     }
 
     /// <summary>
-    /// Update item quantity
+    /// Update item quantity in current user's basket
     /// </summary>
-    /// <param name="userId">User ID</param>
     /// <param name="productId">Product ID</param>
     /// <param name="request">Quantity update request</param>
     /// <returns>Updated basket</returns>
-    [HttpPut("{userId}/items/{productId}")]
+    [HttpPut("items/{productId}")]
     [ProducesResponseType(typeof(BasketDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<BasketDto>> UpdateItemQuantity(
-        string userId, 
         int productId, 
         [FromBody] UpdateQuantityRequest request)
     {
+        if (!_userContext.IsAuthenticated || UserId == null)
+        {
+            return Unauthorized();
+        }
+
         _logger.LogInformation("Updating quantity for item {ProductId} in basket for user {UserId}", 
-            productId, userId);
+            productId, UserId);
 
         if (request.Quantity < 0)
         {
             return BadRequest(new { message = "Quantity cannot be negative" });
         }
 
-        var basket = await _basketService.UpdateItemQuantityAsync(userId, productId, request.Quantity);
+        var basket = await _basketService.UpdateItemQuantityAsync(UserId, productId, request.Quantity);
 
         if (basket == null)
         {
-            _logger.LogWarning("Item {ProductId} not found in basket for user {UserId}", productId, userId);
-            return NotFound(new { message = $"Item {productId} not found in basket for user {userId}" });
+            _logger.LogWarning("Item {ProductId} not found in basket for user {UserId}", productId, UserId);
+            return NotFound(new { message = $"Item {productId} not found in basket for user {UserId}" });
         }
 
         return Ok(basket);
     }
 
     /// <summary>
-    /// Remove item from basket
+    /// Remove item from current user's basket
     /// </summary>
-    /// <param name="userId">User ID</param>
     /// <param name="productId">Product ID</param>
     /// <returns>Updated basket</returns>
-    [HttpDelete("{userId}/items/{productId}")]
+    [HttpDelete("items/{productId}")]
     [ProducesResponseType(typeof(BasketDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<BasketDto>> RemoveItem(string userId, int productId)
+    public async Task<ActionResult<BasketDto>> RemoveItem(int productId)
     {
-        _logger.LogInformation("Removing item {ProductId} from basket for user {UserId}", productId, userId);
+        if (!_userContext.IsAuthenticated || UserId == null)
+        {
+            return Unauthorized();
+        }
 
-        var basket = await _basketService.RemoveItemFromBasketAsync(userId, productId);
+        _logger.LogInformation("Removing item {ProductId} from basket for user {UserId}", productId, UserId);
+
+        var basket = await _basketService.RemoveItemFromBasketAsync(UserId, productId);
 
         if (basket == null)
         {
-            _logger.LogWarning("Item {ProductId} not found in basket for user {UserId}", productId, userId);
-            return NotFound(new { message = $"Item {productId} not found in basket for user {userId}" });
+            _logger.LogWarning("Item {ProductId} not found in basket for user {UserId}", productId, UserId);
+            return NotFound(new { message = $"Item {productId} not found in basket for user {UserId}" });
         }
 
         return Ok(basket);

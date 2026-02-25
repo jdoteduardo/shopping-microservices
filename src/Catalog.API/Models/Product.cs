@@ -8,7 +8,8 @@ public class Product
     public decimal Price { get; set; }
     public int Stock { get; set; }
     public int CategoryId { get; set; }
-    public string CreatedBy { get; set; } = string.Empty;
+    public string? CreatedBy { get; set; }
+    public string? UpdatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 

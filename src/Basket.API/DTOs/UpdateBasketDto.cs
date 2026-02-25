@@ -2,7 +2,6 @@ namespace Basket.API.DTOs;
 
 public class UpdateBasketDto
 {
-    public string UserId { get; set; } = string.Empty;
     public List<UpdateBasketItemDto> Items { get; set; } = new();
 }
 

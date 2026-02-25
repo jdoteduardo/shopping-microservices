@@ -41,11 +41,13 @@ public class BasketService : IBasketService
         return _mapper.Map<BasketDto>(basket);
     }
 
-    public async Task<BasketDto?> UpdateBasketAsync(UpdateBasketDto updateBasketDto)
+    public async Task<BasketDto?> UpdateBasketAsync(string userId, UpdateBasketDto updateBasketDto)
     {
-        _logger.LogInformation("Service: Updating basket for user {UserId}", updateBasketDto.UserId);
+        _logger.LogInformation("Service: Updating basket for user {UserId}", userId);
 
         var basket = _mapper.Map<Models.Basket>(updateBasketDto);
+        basket.UserId = userId; // Manually assign since removed from DTO
+        
         var updatedBasket = await _repository.UpdateBasketAsync(basket);
 
         return updatedBasket != null ? _mapper.Map<BasketDto>(updatedBasket) : null;
