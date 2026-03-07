@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Shared\BuildingBlocks\EventBus.RabbitMQ\EventBus.RabbitMQ.csproj" />
     <ProjectReference Include="..\Shared\BuildingBlocks\IntegrationEvents\IntegrationEvents.csproj" />
     <ProjectReference Include="..\Shared\BuildingBlocks\UserContext\UserContext.csproj" />
+    <ProjectReference Include="..\Shared\BuildingBlocks\Observability\Observability.csproj" />
   </ItemGroup>
 
 </Project>

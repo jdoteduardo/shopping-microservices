@@ -1,6 +1,7 @@
 using ApiGateway.Middleware;
 using Auth.Extensions;
 using Auth.Models;
+using Observability.Extensions;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Ocelot.Provider.Polly;
@@ -55,6 +56,9 @@ try
     // Health Checks
     builder.Services.AddHealthChecks();
 
+    // OpenTelemetry Observability
+    builder.Services.AddObservability("api-gateway");
+
     var app = builder.Build();
 
     // Pipeline
@@ -74,6 +78,7 @@ try
     {
         endpoints.MapControllers();
         endpoints.MapHealthChecks("/health");
+        endpoints.MapPrometheusScrapingEndpoint();
     });
 
     // Use Ocelot

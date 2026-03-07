@@ -1,5 +1,6 @@
 using Basket.API.Extensions;
 using Basket.API.Middleware;
+using Observability.Extensions;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,9 @@ try
     // Custom service extensions
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddSwaggerDocumentation();
+
+    // OpenTelemetry Observability
+    builder.Services.AddObservability("basket-api");
 
     // CORS
     builder.Services.AddCors(options =>
@@ -57,6 +61,9 @@ try
 
     // Health check endpoint
     app.MapHealthChecks("/health");
+
+    // Prometheus metrics endpoint
+    app.MapPrometheusScrapingEndpoint();
 
     // Simple root endpoint
     app.MapGet("/", () => new

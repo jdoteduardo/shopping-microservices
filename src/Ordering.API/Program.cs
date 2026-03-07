@@ -1,5 +1,6 @@
 using Ordering.API.Extensions;
 using Ordering.API.Middleware;
+using Observability.Extensions;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,12 @@ try
     // Custom service extensions
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddSwaggerDocumentation();
+
+    // OpenTelemetry Observability
+    builder.Services.AddObservability("ordering-api", opts =>
+    {
+        opts.UseMongoDB = true;
+    });
 
     // CORS
     builder.Services.AddCors(options =>
@@ -57,6 +64,9 @@ try
 
     // Health check endpoint
     app.MapHealthChecks("/health");
+
+    // Prometheus metrics endpoint
+    app.MapPrometheusScrapingEndpoint();
 
     // Simple root endpoint
     app.MapGet("/", () => new

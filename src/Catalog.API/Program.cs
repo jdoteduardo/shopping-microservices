@@ -5,6 +5,7 @@ using Catalog.API.Middleware;
 using EventBus.Abstractions;
 using IntegrationEvents;
 using Microsoft.EntityFrameworkCore;
+using Observability.Extensions;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,12 @@ try
     // Custom service extensions
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddSwaggerDocumentation();
+
+    // OpenTelemetry Observability
+    builder.Services.AddObservability("catalog-api", opts =>
+    {
+        opts.UseEntityFrameworkCore = true;
+    });
 
     // CORS
     builder.Services.AddCors(options =>
@@ -65,6 +72,9 @@ try
 
     // Health check endpoint
     app.MapHealthChecks("/health");
+
+    // Prometheus metrics endpoint
+    app.MapPrometheusScrapingEndpoint();
 
     // API info endpoint
     app.MapGet("/info", () => new
