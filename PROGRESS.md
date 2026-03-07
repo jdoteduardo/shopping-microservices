@@ -55,7 +55,7 @@
 
 ### DIA 15–16: Observability Stack
 - [x] **Tarefa 15.1** — Instrumentar microserviços com OpenTelemetry (tracing + métricas + `/metrics` endpoint)
-- [ ] **Tarefa 15.2** — Setup Prometheus + Grafana (prometheus.yml, dashboards, docker-compose)
+- [x] **Tarefa 15.2** — Setup Prometheus + Grafana (prometheus.yml, dashboards, docker-compose)
 
 ### DIA 17–18: GitHub Actions CI/CD
 - [ ] **Tarefa 17.1** — CI Pipeline: Build + Test (`.github/workflows/ci.yml`)

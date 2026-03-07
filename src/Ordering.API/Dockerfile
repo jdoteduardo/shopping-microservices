@@ -8,6 +8,7 @@ COPY ["src/Shared/BuildingBlocks/EventBus/EventBus.csproj", "src/Shared/Building
 COPY ["src/Shared/BuildingBlocks/EventBus.RabbitMQ/EventBus.RabbitMQ.csproj", "src/Shared/BuildingBlocks/EventBus.RabbitMQ/"]
 COPY ["src/Shared/BuildingBlocks/IntegrationEvents/IntegrationEvents.csproj", "src/Shared/BuildingBlocks/IntegrationEvents/"]
 COPY ["src/Shared/BuildingBlocks/UserContext/UserContext.csproj", "src/Shared/BuildingBlocks/UserContext/"]
+COPY ["src/Shared/BuildingBlocks/Observability/Observability.csproj", "src/Shared/BuildingBlocks/Observability/"]
 
 RUN dotnet restore "src/Ordering.API/Ordering.API.csproj"
 

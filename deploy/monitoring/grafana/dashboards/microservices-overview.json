@@ -1,0 +1,333 @@
+{
+    "annotations": {
+        "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "panels": [
+        {
+            "title": "🟢 Active Services",
+            "type": "stat",
+            "gridPos": {
+                "h": 4,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "1": {
+                                    "text": "UP",
+                                    "color": "green"
+                                },
+                                "0": {
+                                    "text": "DOWN",
+                                    "color": "red"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            "targets": [
+                {
+                    "expr": "up",
+                    "legendFormat": "{{job}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "colorMode": "background",
+                "graphMode": "none",
+                "textMode": "auto",
+                "orientation": "horizontal"
+            }
+        },
+        {
+            "title": "📈 Request Rate (per second)",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 4
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "targets": [
+                {
+                    "expr": "rate(http_server_request_duration_seconds_count[1m])",
+                    "legendFormat": "{{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 2,
+                        "fillOpacity": 15,
+                        "gradientMode": "scheme",
+                        "pointSize": 5,
+                        "showPoints": "auto"
+                    },
+                    "unit": "reqps"
+                }
+            }
+        },
+        {
+            "title": "⏱️ Response Time — p95 (ms)",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 4
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, job))",
+                    "legendFormat": "{{job}} p95",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 2,
+                        "fillOpacity": 10,
+                        "gradientMode": "scheme",
+                        "thresholdsStyle": {
+                            "mode": "line"
+                        }
+                    },
+                    "unit": "s",
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.5
+                            },
+                            {
+                                "color": "red",
+                                "value": 2
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "❌ Error Rate (5xx per second)",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 12
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[1m])) by (job)",
+                    "legendFormat": "{{job}} 5xx",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 2,
+                        "fillOpacity": 30,
+                        "gradientMode": "scheme"
+                    },
+                    "unit": "reqps",
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 0.1
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "📊 Request Count by Status Code",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 12
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_server_request_duration_seconds_count[1m])) by (http_response_status_code, job)",
+                    "legendFormat": "{{job}} — {{http_response_status_code}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "bars",
+                        "lineWidth": 1,
+                        "fillOpacity": 80,
+                        "stacking": {
+                            "mode": "normal"
+                        }
+                    },
+                    "unit": "reqps"
+                }
+            }
+        },
+        {
+            "title": "🧠 .NET Runtime — GC Heap Size",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 20
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "targets": [
+                {
+                    "expr": "process_runtime_dotnet_gc_heap_size_bytes",
+                    "legendFormat": "{{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 2,
+                        "fillOpacity": 15,
+                        "gradientMode": "scheme"
+                    },
+                    "unit": "bytes"
+                }
+            }
+        },
+        {
+            "title": "🧵 .NET Runtime — Thread Pool Threads",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 20
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "targets": [
+                {
+                    "expr": "process_runtime_dotnet_thread_pool_threads_count",
+                    "legendFormat": "{{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 2,
+                        "fillOpacity": 15,
+                        "gradientMode": "scheme"
+                    },
+                    "unit": "short"
+                }
+            }
+        }
+    ],
+    "refresh": "10s",
+    "schemaVersion": 39,
+    "tags": [
+        "microservices",
+        "dotnet",
+        "prometheus"
+    ],
+    "templating": {
+        "list": [
+            {
+                "current": {},
+                "hide": 0,
+                "includeAll": false,
+                "name": "DS_PROMETHEUS",
+                "query": "prometheus",
+                "type": "datasource"
+            }
+        ]
+    },
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "Shop Microservices — Overview",
+    "uid": "shop-microservices-overview",
+    "version": 1
+}

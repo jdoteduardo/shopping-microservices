@@ -5,6 +5,7 @@ WORKDIR /src
 # Copy project files and restore dependencies
 COPY ["src/Basket.API/Basket.API.csproj", "src/Basket.API/"]
 COPY ["src/Shared/BuildingBlocks/UserContext/UserContext.csproj", "src/Shared/BuildingBlocks/UserContext/"]
+COPY ["src/Shared/BuildingBlocks/Observability/Observability.csproj", "src/Shared/BuildingBlocks/Observability/"]
 
 RUN dotnet restore "src/Basket.API/Basket.API.csproj"
 

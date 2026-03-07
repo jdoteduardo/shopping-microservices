@@ -17,6 +17,8 @@
 #   - API Gateway:    http://localhost:5000
 #   - Seq (Logs):     http://localhost:5341
 #   - RabbitMQ UI:    http://localhost:15672
+#   - Prometheus:     http://localhost:9090
+#   - Grafana:        http://localhost:3000 (admin/admin)
 #
 # OBS: Microserviços (Catalog, Basket, Ordering) não expõem portas para o host,
 # devendo ser acessados via API Gateway (ex: http://localhost:5000/api/catalog).
@@ -171,6 +173,56 @@ services:
       - shop-network
     restart: unless-stopped
 
+  # --------------------------------------------------------------------------
+  # Prometheus (Metrics Collection)
+  # Coleta métricas de todos os microserviços via endpoint /metrics
+  # UI: http://localhost:9090
+  # --------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: shop-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - shop-network
+    depends_on:
+      - catalog-api
+      - basket-api
+      - ordering-api
+      - api-gateway
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Grafana (Metrics Visualization)
+  # Dashboards e alertas para monitoramento dos microserviços
+  # UI: http://localhost:3000 (admin/admin)
+  # --------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: shop-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - shop-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
   # ==========================================================================
   # MICROSERVIÇOS
   # ==========================================================================
@@ -310,6 +362,14 @@ volumes:
   # Seq log storage
   seq-data:
     name: shop-seq-data
+
+  # Prometheus time-series data
+  prometheus-data:
+    name: shop-prometheus-data
+
+  # Grafana configuration and data
+  grafana-data:
+    name: shop-grafana-data
 
 # ============================================================================
 # NETWORKS
