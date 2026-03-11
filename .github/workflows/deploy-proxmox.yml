@@ -1,0 +1,143 @@
+# =============================================================================
+# Deploy to Proxmox VM
+# =============================================================================
+# Faz deploy dos containers Docker na VM Proxmox via SSH após o CD pipeline
+# completar com sucesso, ou pode ser acionado manualmente.
+#
+# REQUISITOS (Secrets do repositório):
+#   - PROXMOX_HOST:     IP ou hostname da VM Proxmox
+#   - PROXMOX_USER:     Usuário SSH (ex: deploy)
+#   - PROXMOX_SSH_KEY:  Chave privada SSH para acesso à VM
+#   - PROXMOX_PORT:     Porta SSH (padrão: 22)
+# =============================================================================
+
+name: Deploy — Proxmox VM
+
+on:
+  # Trigger automático após CD pipeline
+  workflow_run:
+    workflows: ["CD — Docker Build & Push"]
+    types: [completed]
+    branches: [main]
+
+  # Trigger manual
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag da imagem Docker para deploy (ex: latest, sha-abc1234, 1.0.0)"
+        required: false
+        default: "latest"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/shop
+  DEPLOY_DIR: /opt/shop-microservices
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to Proxmox
+    runs-on: ubuntu-latest
+    # Só executa se o CD pipeline foi bem-sucedido (workflow_run) ou se é manual
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    environment:
+      name: production
+      url: http://${{ secrets.PROXMOX_HOST }}:5000
+
+    steps:
+      # ------------------------------------------------------------------
+      # 1. Determinar tag da imagem
+      # ------------------------------------------------------------------
+      - name: 🏷️ Determine image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      # ------------------------------------------------------------------
+      # 2. Deploy via SSH
+      # ------------------------------------------------------------------
+      - name: 🔐 Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROXMOX_HOST }}
+          username: ${{ secrets.PROXMOX_USER }}
+          key: ${{ secrets.PROXMOX_SSH_KEY }}
+          port: ${{ secrets.PROXMOX_PORT || 22 }}
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "🚀 Deploying Shop Microservices"
+            echo "   Tag: ${{ steps.tag.outputs.tag }}"
+            echo "   Date: $(date)"
+            echo "======================================"
+
+            # Login no GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+            # Pull das novas imagens
+            echo "📥 Pulling images..."
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-catalog-api:${{ steps.tag.outputs.tag }}
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-basket-api:${{ steps.tag.outputs.tag }}
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-ordering-api:${{ steps.tag.outputs.tag }}
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api-gateway:${{ steps.tag.outputs.tag }}
+
+            # Navegar para o diretório do projeto
+            cd ${{ env.DEPLOY_DIR }}
+
+            # Atualizar e reiniciar os containers
+            echo "🔄 Restarting services..."
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # Limpar imagens antigas
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+
+            # Verificar status
+            echo "✅ Checking service health..."
+            sleep 10
+            docker compose -f docker-compose.prod.yml ps
+
+            echo "======================================"
+            echo "✅ Deploy completed successfully!"
+            echo "======================================"
+
+      # ------------------------------------------------------------------
+      # 3. Verificar deploy (health check)
+      # ------------------------------------------------------------------
+      - name: ❤️ Health Check
+        if: ${{ secrets.PROXMOX_HOST != '' }}
+        run: |
+          echo "Waiting for services to be ready..."
+          sleep 15
+
+          # Health check via API Gateway
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.PROXMOX_HOST }}:5000/health || echo "000")
+
+          if [ "$STATUS" == "200" ]; then
+            echo "✅ API Gateway is healthy!"
+          else
+            echo "⚠️ API Gateway returned status: $STATUS"
+            echo "   Services may still be starting up."
+          fi
+
+      # ------------------------------------------------------------------
+      # 4. Summary
+      # ------------------------------------------------------------------
+      - name: 📋 Deploy Summary
+        if: always()
+        run: |
+          echo "## 🚀 Deploy to Proxmox Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | Production (Proxmox VM) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image Tag** | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Trigger** | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY

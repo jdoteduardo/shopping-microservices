@@ -1,7 +1,7 @@
 # 📊 ShopMicroservices — Progresso do Projeto
 
 > Acompanhamento de todas as tarefas do projeto, da fundação ao deploy.
-> Última atualização: 06/03/2026
+> Última atualização: 10/03/2026
 
 ---
 
@@ -58,8 +58,8 @@
 - [x] **Tarefa 15.2** — Setup Prometheus + Grafana (prometheus.yml, dashboards, docker-compose)
 
 ### DIA 17–18: GitHub Actions CI/CD
-- [ ] **Tarefa 17.1** — CI Pipeline: Build + Test (`.github/workflows/ci.yml`)
-- [ ] **Tarefa 17.2** — CD Pipeline: Docker Build + Push (`.github/workflows/cd.yml` + `deploy-proxmox.yml`)
+- [x] **Tarefa 17.1** — CI Pipeline: Build + Test (`.github/workflows/ci.yml`)
+- [x] **Tarefa 17.2** — CD Pipeline: Docker Build + Push (`.github/workflows/cd.yml` + `deploy-proxmox.yml`)
 
 ### DIA 19: Health Checks + Alerting
 - [ ] **Tarefa 19.1** — Grafana Alerting (service down, error rate, response time, queue depth)
@@ -103,7 +103,7 @@
 |--------|------|--------|-----------|
 | Semana 1 | Foundation (3 APIs + Docker) | ✅ Concluída | 100% |
 | Semana 2 | Integration (Pub/Sub + Auth + Gateway) | ✅ Concluída | 100% |
-| Semana 3 | Observability + CI/CD | 🔲 Não iniciada | 0% |
+| Semana 3 | Observability + CI/CD | 🔶 Em progresso | 75% |
 | Semana 4 | Proxmox Deploy + Finalização | 🔲 Não iniciada | 0% |
 
 **Progresso geral: ~50%** (Semanas 1–2 completas, Semanas 3–4 pendentes)
